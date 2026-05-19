@@ -1,7 +1,3 @@
-## Written by: Harshet Anand
-## Attribution: Ruochun Zhang's CS540 P1 Solution 2021
-## Collaborated with Sreya Sarathy from CS 540
-
 import numpy as np
 import os
 from pathlib import Path
