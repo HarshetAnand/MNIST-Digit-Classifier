@@ -1,148 +1,130 @@
-import pandas as pd
+"""Logistic regression from scratch on two handwritten digits from MNIST.
+
+Trains a binary classifier to tell apart two digits (3 and 8 by default)
+using batch gradient descent on the cross-entropy loss, with NumPy only.
+The trained model is then used to classify a separate file of test images.
+
+Input files:
+    mnist_train.csv  one image per row: the digit label, then 784 pixel
+                     values (28x28) from 0 to 255
+    test.txt         one image per row: 784 comma-separated pixel values
+
+Output:
+    logistic_regression_results.txt  the first training image, the learned
+                                     weights and bias, and the predicted
+                                     probability and class of each test image
+"""
+
 import numpy as np
+import pandas as pd
+
+TRAIN_FILE = "mnist_train.csv"
+TEST_FILE = "test.txt"
+RESULTS_FILE = "logistic_regression_results.txt"
+
+# The two digits to tell apart. The first is class 0 and the second is class 1.
+digits = [3, 8]
+
+# Hyperparameters.
+num_epochs = 200
+alpha = 0.01  # learning rate
 
 
-# Part 1: Setup the data
+# ---------------------------------------------------------------------------
+# Data loading
+# ---------------------------------------------------------------------------
+
 def data_loader(file):
+    """Read images and labels, scaling the pixels to the range [0, 1]."""
     df = pd.read_csv(file)
     x = (df.iloc[:, 1:] / 255.0).to_numpy()
     y = df.iloc[:, 0].to_numpy()
     return (x, y)
 
 
-# load the training data
-x_train, y_train = data_loader("mnist_train.csv")
+x_train, y_train = data_loader(TRAIN_FILE)
 
-
-# test_labels might be different for you
-# 8 (label it 0) and 4 (label it 1)
-test_labels = [3, 8]
-indices = np.where(np.isin(y_train, test_labels))[0]
-
-# get the indices of the training data that have labels 8 and 4
+# Keep only the images of the two chosen digits.
+indices = np.where(np.isin(y_train, digits))[0]
 x = x_train[indices]
 y = y_train[indices]
 
-# label 8 as 0 and label 4 as 1
-y[y == test_labels[0]] = 0
-y[y == test_labels[1]] = 1
+# Relabel the two digits as 0 and 1.
+y[y == digits[0]] = 0
+y[y == digits[1]] = 1
 
-# Part 2: Configure the Hyperparameters
 
-# adjust number of epochs and learning rate by yourself
-num_epochs = 200
-alpha = 0.01
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
 
-# total number of pixels in an image (28x28)
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+
+# Number of pixels in an image (28x28).
 m = x.shape[1]
 
-# random weights and bias in the beginning
+# Start from random weights and bias.
 w = np.random.rand(m)
 b = np.random.rand()
 
-# Part 3: Training Logistic Regression
-
-# start with a large number
+# Start with a large number, so the first loss reduction is not meaningful.
 loss_previous = 10e10
 
-# step over the epochs
 for epoch in range(num_epochs):
-    # calculate the activation
-    a = x @ w + b
-    a = 1 / (1 + np.exp(-a))
-
-    # bound items in a to avoid log(0):
+    # Predicted probability of class 1 for every image, bounded away from 0
+    # and 1 to avoid log(0) in the loss.
+    a = sigmoid(x @ w + b)
     a = np.clip(a, 0.001, 0.999)
 
-    # calculate the weights and bias
+    # Gradient descent step on the cross-entropy loss.
     w -= alpha * (x.T) @ (a - y)
     b -= alpha * (a - y).sum()
 
-    # calculate the loss
     loss = -np.sum(y * np.log(a) + (1 - y) * np.log(1 - a))
     loss_reduction = loss_previous - loss
     loss_previous = loss
 
-    # calculate the accuracy
-    # correct predictions / total number of predictions
+    # Share of training images classified correctly.
     accuracy = sum((a > 0.5).astype(int) == y) / len(y)
 
     print(
-        "epoch = ",
-        epoch,
+        "epoch = {:3d}".format(epoch),
         " loss = {:.7}".format(loss),
         " loss reduction = {:.7}".format(loss_reduction),
         " correctly classified = {:.4%}".format(accuracy),
     )
 
-# Part 4: Write
-file = "result5.txt"
-import os
-from pathlib import Path
 
-my_file = Path(file)
-if my_file.is_file():
-    os.remove(file)
+# ---------------------------------------------------------------------------
+# Test predictions
+# ---------------------------------------------------------------------------
 
+x_test = np.loadtxt(TEST_FILE, delimiter=",")
+x_test = x_test / 255.0
 
-# Q1: first_tranining image  the feature vector 
-first = x[0]
-
-f = open(file, "a")
-f.write("##1: \n")
-
-for i, value in enumerate(first):
-    if i != 0:
-        f.write(", ")
-    f.write("%.2f" % value)
-f.write("\n")
-f.close()
-
-# Q2: write the weights and bias
-f = open(file, "a")
-f.write("##2: \n")
-for i, value in enumerate(w):
-    if i != 0:
-        f.write(", ")
-    f.write("%.4f" % value)
-f.write(", ")
-# write the bias
-f.write("%.4f" % b)
-f.write("\n")
-f.close()
-
-# Q3
-
-# Load the test 
-x = np.loadtxt("sreyatest.txt", delimiter=",")
-x = x / 255.0
-
-# calculate the activation
-a = 1 / (1 + np.exp(-(x @ w + b)))
-
-f = open(file, "a")
-f.write("##3: \n")
-for i, value in enumerate(a):
-    if i != 0:
-        f.write(", ")
-    f.write("%.2f" % value)
-f.write("\n")
-f.close()
+# Predicted probability of class 1 for each test image, and the class it
+# implies.
+test_probabilities = sigmoid(x_test @ w + b)
+test_predictions = [1 if p >= 0.5 else 0 for p in test_probabilities]
 
 
-# Q4
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
 
-f = open(file, "a")
-f.write("##4: \n")
+with open(RESULTS_FILE, "w") as f:
+    f.write("Feature vector of the first training image:\n")
+    f.write(", ".join("%.2f" % value for value in x[0]) + "\n")
 
-# enumerate over the activations computed in Q3 (activations of the test data)
-for i, value in enumerate(a):
-    if value >= 0.5:
-        value = 1
-    else:
-        value = 0
-    if i != 0:
-        f.write(", ")
-    f.write(str(value))
-f.write("\n")
-f.close()
+    f.write("Learned weights, followed by the bias:\n")
+    f.write(", ".join("%.4f" % value for value in w))
+    f.write(", " + "%.4f" % b + "\n")
+
+    f.write("Predicted probability of class 1 for each test image:\n")
+    f.write(", ".join("%.2f" % value for value in test_probabilities) + "\n")
+
+    f.write("Predicted class for each test image "
+            "(0 = digit {}, 1 = digit {}):\n".format(digits[0], digits[1]))
+    f.write(", ".join(str(value) for value in test_predictions) + "\n")
