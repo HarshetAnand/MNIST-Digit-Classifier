@@ -18,14 +18,25 @@ A from-scratch implementation of logistic regression and a single-hidden-layer n
 - Pandas (data loading)
 - MNIST dataset
 
+## Data
+
+The scripts expect two files in the project folder:
+
+- `mnist_train.csv`: the MNIST training set in CSV format, one image per row (the digit label, then 784 pixel values from 0 to 255).
+- `test.txt`: unlabeled test images, one per row, as 784 comma-separated pixel values. `neural_network.py` assumes the first 100 rows are the first digit and the rest are the second.
+
+Both scripts classify the digits 3 and 8 by default. Change the `digits` list at the top of either file to use a different pair.
+
 ## Implementation Details
 
-**Logistic Regression (p1.py)**
+**Logistic Regression (logistic_regression.py)**
+
 - 200 epochs, learning rate 0.01
 - Sigmoid activation with cross-entropy loss
 - Manual weight and bias updates via gradient descent
 
-**Neural Network (p2.py)**
+**Neural Network (neural_network.py)**
+
 - 1 hidden layer with 28 units
 - 70 epochs, learning rate 0.01
 - Sigmoid activations throughout
