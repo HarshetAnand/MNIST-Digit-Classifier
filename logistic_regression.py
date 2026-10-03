@@ -36,7 +36,7 @@ alpha = 0.01  # learning rate
 
 def data_loader(file):
     """Read images and labels, scaling the pixels to the range [0, 1]."""
-    df = pd.read_csv(file)
+    df = pd.read_csv(file, header=None)
     x = (df.iloc[:, 1:] / 255.0).to_numpy()
     y = df.iloc[:, 0].to_numpy()
     return (x, y)
